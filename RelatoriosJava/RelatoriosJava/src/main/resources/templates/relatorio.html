@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="${relatorio != null ? relatorio.nome : 'Gerador de Relatórios'}">Gerador de Relatórios</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<main class="container">
+<header><h1 th:text="${relatorio != null ? relatorio.nome : 'Nenhum relatório cadastrado'}">Relatório</h1>
+<p th:if="${relatorio != null and relatorio.descricao != null}" th:text="${relatorio.descricao}"></p></header>
+
+<section class="card" th:if="${relatorio != null}">
+<h2>Filtros</h2>
+<form method="post" th:action="@{/relatorios/{id}/gerar(id=${relatorio.id})}" class="grid">
+<div class="field" th:each="campo : ${campos}">
+<label th:for="${campo.nome}"><span th:text="${campo.label}"></span><b th:if="${campo.obrigatorio}"> *</b></label>
+<input th:if="${campo.tipo.name() == 'TEXT'}" type="text" th:id="${campo.nome}" th:name="${campo.nome}" th:placeholder="${campo.placeholder}" th:required="${campo.obrigatorio}" th:value="${filtrosRecebidos != null ? filtrosRecebidos[campo.nome] : ''}">
+<input th:if="${campo.tipo.name() == 'NUMBER'}" type="number" step="any" th:id="${campo.nome}" th:name="${campo.nome}" th:placeholder="${campo.placeholder}" th:required="${campo.obrigatorio}" th:value="${filtrosRecebidos != null ? filtrosRecebidos[campo.nome] : ''}">
+<input th:if="${campo.tipo.name() == 'DATE'}" type="date" th:id="${campo.nome}" th:name="${campo.nome}" th:required="${campo.obrigatorio}" th:value="${filtrosRecebidos != null ? filtrosRecebidos[campo.nome] : ''}">
+<select th:if="${campo.tipo.name() == 'SELECT'}" th:id="${campo.nome}" th:name="${campo.nome}" th:required="${campo.obrigatorio}">
+<option value="">Todos</option><option th:each="opcao : ${campo.opcao}" th:value="${opcao.valor}" th:text="${opcao.label}" th:selected="${filtrosRecebidos != null and filtrosRecebidos[campo.nome] == opcao.valor}"></option>
+</select>
+<input th:if="${campo.tipo.name() == 'CHECKBOX'}" type="checkbox" value="true" th:id="${campo.nome}" th:name="${campo.nome}" th:checked="${filtrosRecebidos != null and filtrosRecebidos[campo.nome] == 'true'}">
+</div>
+<div class="actions"><button type="reset" class="secondary">Limpar</button><button type="submit">Gerar relatório</button></div>
+</form>
+</section>
+
+<section class="card" th:if="${resultados != null}">
+<h2>Resultado</h2>
+<div class="actions" th:unless="${#lists.isEmpty(resultados)}">
+<a class="button-download" th:href="@{/relatorios/{id}/download(id=${relatorio.id})}" id="downloadCsv">Baixar CSV</a>
+</div>
+<p th:if="${#lists.isEmpty(resultados)}">Nenhum registro encontrado.</p>
+<table th:unless="${#lists.isEmpty(resultados)}">
+<thead><tr><th th:each="coluna : ${colunas}" th:text="${coluna.label}"></th></tr></thead>
+<tbody><tr th:each="linha : ${resultados}"><td th:each="coluna : ${colunas}" th:text="${linha[coluna.campo]}"></td></tr></tbody>
+</table>
+</section>
+</main>
+<script th:if="${resultados != null}">
+// Reaproveita TODOS os filtros atuais no download, sem hardcode de cliente/status/data.
+const link = document.getElementById('downloadCsv');
+if (link) {
+  const params = new URLSearchParams();
+  document.querySelectorAll('form input[name], form select[name]').forEach(el => {
+    if (el.type === 'checkbox') { if (el.checked) params.set(el.name, el.value); }
+    else if (el.value !== '') params.set(el.name, el.value);
+  });
+  if ([...params].length) link.href += '?' + params.toString();
+}
+</script>
+</body></html>
